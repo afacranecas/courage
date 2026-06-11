@@ -1,15 +1,358 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OVERCOMING</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constellation of Courage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#04050d;
+    --glass:linear-gradient(160deg, rgba(255,255,255,.13), rgba(255,255,255,.035));
+    --stroke:rgba(255,255,255,.18);
+    --linen:#f4f5fc;
+    --ash:#9ba4c6;
+    --cyan:#8fe3ff;
+    --violet:#bfa8ff;
+    --gold:#ffe2a8;
+    --pink:#ff9fd4;
+    --ui:"Jost", system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--void)}
+  body{font-family:var(--ui);font-weight:300;color:var(--linen);
+    -webkit-font-smoothing:antialiased;user-select:none;letter-spacing:.01em}
+
+  .nebula{position:fixed;inset:0;z-index:0;overflow:hidden}
+  .nebula::before,.nebula::after{content:"";position:absolute;border-radius:50%;filter:blur(100px);opacity:.42}
+  .nebula::before{width:58vw;height:58vw;left:-12vw;top:-14vw;
+    background:radial-gradient(circle, rgba(130,100,255,.55), transparent 60%)}
+  .nebula::after{width:52vw;height:52vw;right:-10vw;bottom:-16vw;
+    background:radial-gradient(circle, rgba(0,170,255,.4), transparent 62%)}
+
+  #sky-canvas{position:fixed;inset:0;z-index:1}
+  #sky-world{position:fixed;left:-15vw;top:-15vh;width:130vw;height:130vh;z-index:2;will-change:transform}
+
+  /* ---------- luminous stars ---------- */
+  .fear-star{position:absolute;width:var(--s);height:var(--s);cursor:pointer;
+    transform:translate(-50%,-50%) scale(0);
+    transition:transform 1.3s cubic-bezier(.16,1,.3,1), filter .35s ease;
+    animation:twinkle 4.5s ease-in-out infinite}
+  .fear-star.born{transform:translate(-50%,-50%) scale(1)}
+  .fear-star .halo{position:absolute;inset:-90%;border-radius:50%;mix-blend-mode:screen;
+    background:radial-gradient(circle, var(--c1) 0%, transparent 58%);filter:blur(2px);opacity:.75}
+  .fear-star .core{position:absolute;inset:30%;border-radius:50%;background:#fff;
+    box-shadow:0 0 4px 1px #fff, 0 0 10px 3px var(--c1), 0 0 22px 6px var(--c1)}
+  /* diffraction spikes -> "real" shiny star */
+  .fear-star::before,.fear-star::after{content:"";position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);mix-blend-mode:screen;opacity:.6;
+    background:linear-gradient(transparent,#fff,transparent)}
+  .fear-star::before{width:1.4px;height:calc(var(--s)*4)}
+  .fear-star::after{height:1.4px;width:calc(var(--s)*4);
+    background:linear-gradient(90deg,transparent,#fff,transparent)}
+  .fear-star:hover{filter:brightness(1.4)}
+  .fear-star:hover .halo{opacity:1;inset:-130%}
+  .fear-star.playing .core{animation:beat 1s ease-in-out infinite}
+  .fear-star.playing .halo{opacity:1}
+  @keyframes twinkle{0%,100%{opacity:.85}50%{opacity:1}}
+  @keyframes beat{0%,100%{box-shadow:0 0 5px 2px #fff,0 0 14px 4px var(--c1),0 0 28px 8px var(--c1)}
+    50%{box-shadow:0 0 9px 3px #fff,0 0 26px 7px var(--c1),0 0 52px 14px var(--c1)}}
+
+  /* ---------- masthead ---------- */
+  .masthead{position:fixed;top:34px;left:0;right:0;z-index:5;text-align:center;pointer-events:none}
+  .masthead .eyebrow{font-size:11px;font-weight:400;letter-spacing:.52em;text-transform:uppercase;color:var(--ash);text-indent:.52em}
+  .masthead h1{font-weight:300;font-size:30px;letter-spacing:.16em;text-transform:uppercase;text-indent:.16em;margin-top:10px}
+  .count{font-size:13px;font-weight:300;color:var(--ash);margin-top:6px;letter-spacing:.08em}
+
+  .clear{position:fixed;top:36px;right:30px;z-index:6;font-family:var(--ui);font-weight:400;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ash);
+    background:none;border:none;cursor:pointer;transition:.2s}
+  .clear:hover{color:var(--pink)}
+
+  /* ---------- station ---------- */
+  .station{position:fixed;bottom:0;left:0;right:0;z-index:5;display:flex;flex-direction:column;
+    align-items:center;gap:26px;padding:52px 20px 44px;
+    background:linear-gradient(to top, rgba(4,5,13,.95) 26%, transparent)}
+  .prompt{font-weight:300;font-size:clamp(30px,4.8vw,50px);line-height:1.1;text-align:center;
+    max-width:820px;letter-spacing:.005em}
+  .prompt b{font-weight:500;background:linear-gradient(100deg,var(--gold),var(--pink),var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* glossy CTA */
+  .step-btn{position:relative;font-family:var(--ui);font-weight:500;font-size:16px;
+    letter-spacing:.22em;text-transform:uppercase;text-indent:.22em;color:#0b0c1c;
+    border:none;border-radius:100px;padding:19px 52px;cursor:pointer;overflow:hidden;isolation:isolate;
+    background:linear-gradient(180deg,#ffffff 0%, #eaf4ff 38%, #c9b8ff 100%);
+    box-shadow:0 14px 44px -10px rgba(150,120,255,.8),
+      inset 0 2px 0 rgba(255,255,255,1), inset 0 -10px 18px -8px rgba(90,50,170,.55),
+      inset 0 0 0 1px rgba(255,255,255,.6)}
+  .step-btn::before{content:"";position:absolute;inset:2px 2px 48% 2px;border-radius:100px 100px 30px 30px;
+    background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,0));z-index:-1}
+  .step-btn .sheen{position:absolute;top:0;left:-60%;width:45%;height:100%;z-index:-1;
+    background:linear-gradient(105deg,transparent,rgba(255,255,255,.85),transparent);
+    transform:skewX(-18deg);animation:sweep 6s ease-in-out infinite}
+  @keyframes sweep{0%{left:-60%}14%{left:140%}100%{left:140%}}
+  .step-btn:hover{transform:translateY(-3px) scale(1.02)}
+  .step-btn:active{transform:translateY(0)}
+  .step-btn,.step-btn:hover{transition:transform .25s cubic-bezier(.16,1,.3,1)}
+
+  /* slider directly under the button */
+  .thr{display:flex;flex-direction:column;align-items:center;gap:8px;width:min(320px,80vw)}
+  .thr label{font-size:10px;font-weight:400;letter-spacing:.26em;text-transform:uppercase;color:var(--ash)}
+  .thr .track{display:flex;align-items:center;gap:12px;width:100%}
+  .thr span{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash);opacity:.7}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,rgba(255,255,255,.15),rgba(143,227,255,.6));outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;cursor:pointer;
+    background:radial-gradient(circle at 38% 34%,#fff,#cbe6ff 60%,#a98fff);
+    box-shadow:0 0 10px rgba(150,200,255,.9), inset 0 1px 1px rgba(255,255,255,.9)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;cursor:pointer;
+    background:radial-gradient(circle at 38% 34%,#fff,#cbe6ff 60%,#a98fff);box-shadow:0 0 10px rgba(150,200,255,.9)}
+  .consent{font-size:12px;font-weight:300;color:var(--ash);max-width:430px;text-align:center;line-height:1.6;letter-spacing:.02em}
+
+  /* ---------- rite overlay ---------- */
+  .overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(70% 70% at 50% 55%, rgba(12,14,34,.55), rgba(4,5,13,.9));backdrop-filter:blur(12px)}
+  .overlay.show{display:flex;animation:fade .5s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .glass{background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(28px) saturate(1.3);
+    box-shadow:0 40px 100px -30px rgba(0,0,0,.8), inset 0 2px 0 rgba(255,255,255,.45), inset 0 0 40px rgba(255,255,255,.05)}
+  .rite{width:min(420px,92vw);padding:44px 36px;border-radius:34px;text-align:center;
+    display:flex;flex-direction:column;align-items:center;gap:26px}
+  .rite .line{font-weight:300;font-size:25px;line-height:1.25;min-height:32px;letter-spacing:.01em}
+  .rite .sub{font-size:13px;font-weight:300;color:var(--ash);min-height:18px;line-height:1.45}
+  .column{position:relative;width:80px;height:228px;border-radius:60px;overflow:hidden;
+    background:rgba(255,255,255,.04);border:1px solid var(--stroke);
+    box-shadow:inset 0 2px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.2)}
+  .fill{position:absolute;left:0;right:0;bottom:0;height:0%;border-radius:60px 60px 0 0;
+    background:linear-gradient(to top,var(--gold),var(--pink) 45%,var(--cyan));
+    box-shadow:0 0 34px rgba(160,200,255,.7);transition:height .08s linear}
+  .threshold{position:absolute;left:-6px;right:-6px;height:2px;background:rgba(255,255,255,.5)}
+  .threshold::after{content:"heard";position:absolute;right:calc(100% + 10px);top:-7px;
+    font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--ash)}
+  .rite-actions{display:flex;gap:12px}
+  .ghost{font-family:var(--ui);font-weight:400;font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ash);background:transparent;border:1px solid var(--stroke);border-radius:100px;padding:13px 26px;cursor:pointer;transition:.2s}
+  .ghost:hover{color:var(--linen);border-color:rgba(255,255,255,.4)}
+  .ghost.solid{color:#0b0c1c;border:none;font-weight:500;
+    background:linear-gradient(180deg,#fff,#cbe6ff 40%,var(--violet));box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+
+  /* ---------- detail ---------- */
+  .detail{position:fixed;z-index:18;display:none;flex-direction:column;gap:12px;width:262px;
+    padding:22px 24px;border-radius:24px;transform:translate(-50%,calc(-100% - 28px));
+    background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(26px) saturate(1.3);
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.8), inset 0 2px 0 rgba(255,255,255,.4)}
+  .detail.show{display:flex;animation:fade .25s ease}
+  .detail .meta{font-size:10px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--ash)}
+  .detail .w{font-weight:300;font-size:21px;line-height:1.25;letter-spacing:.01em}
+  .detail .play{margin-top:2px;font-family:var(--ui);font-weight:500;font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:#0b0c1c;border:none;border-radius:100px;padding:12px;cursor:pointer;
+    background:linear-gradient(180deg,#fff,#cbe6ff 40%,var(--violet));box-shadow:inset 0 1px 0 rgba(255,255,255,.7);transition:.2s}
+  .detail .play:hover{filter:brightness(1.07)}
+
+  .hint{position:fixed;bottom:212px;left:50%;transform:translateX(-50%);z-index:4;
+    font-size:11px;font-weight:300;color:var(--ash);letter-spacing:.1em;opacity:0;transition:opacity .6s;pointer-events:none}
+  .hint.show{opacity:.8}
+
+  @media (prefers-reduced-motion: reduce){.fear-star{animation:none;transition:transform .01s}.sheen{animation:none;display:none}}
+</style>
+</head>
+<body>
+  <div class="nebula"></div>
+  <canvas id="sky-canvas"></canvas>
+  <div id="sky-world"></div>
+
+  <div class="masthead">
+    <div class="eyebrow">Principle of Courage</div>
+    <h1>Constellation of Courage</h1>
+    <div class="count" id="count">an empty sky, waiting</div>
+  </div>
+  <button class="clear" id="clear">clear the sky</button>
+
+  <div class="hint" id="hint">drag or scroll to drift · touch a star to hear who was brave</div>
+
+  <div class="station">
+    <div class="prompt">Step up to the sky and say, out loud,<br>one thing you are <b>afraid</b> of.</div>
+    <button class="step-btn" id="step"><span class="sheen"></span>Step up</button>
+    <div class="thr">
+      <label>how loud a voice must be to ignite a star</label>
+      <div class="track"><span>soft</span><input id="sens" type="range" min="0.04" max="0.5" step="0.01" value="0.16"><span>loud</span></div>
+    </div>
+    <div class="consent">Your voice becomes a star anyone here can touch and replay. Nothing leaves this device.</div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="rite glass">
+      <div class="line" id="riteLine">Take a breath. When you're ready, speak.</div>
+      <div class="column"><div class="fill" id="fill"></div><div class="threshold" id="thresholdMark"></div></div>
+      <div class="sub" id="riteSub">Say it loud enough that the sky can hear you.</div>
+      <div class="rite-actions">
+        <button class="ghost" id="cancel">step back</button>
+        <button class="ghost solid" id="release" style="display:none">release to the sky</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail" id="detail">
+    <div class="meta" id="detailMeta">a voice from earlier</div>
+    <div class="w" id="detailWitness"></div>
+    <button class="play" id="detailPlay">Replay this voice</button>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let panX=0,panY=0,ptrX=0,ptrY=0,driftT=0;
+  const world=document.getElementById('sky-world');
+
+  const canvas=document.getElementById('sky-canvas'),ctx=canvas.getContext('2d');
+  let W,H,bg=[];
+  function resize(){
+    W=canvas.width=innerWidth*devicePixelRatio;H=canvas.height=innerHeight*devicePixelRatio;
+    canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';
+    bg=[];const n=Math.round(innerWidth*innerHeight/7000);
+    for(let i=0;i<n;i++){const depth=[0.25,0.5,0.9][Math.floor(Math.random()*3)];
+      bg.push({x:Math.random()*W,y:Math.random()*H,r:(Math.random()*1.2+0.2)*devicePixelRatio,
+        a:Math.random()*0.5+0.12,tw:Math.random()*0.02+0.004,p:Math.random()*6.28,depth});}
+  }
+  addEventListener('resize',resize);resize();
+
+  function clampPan(){const mx=innerWidth*0.15,my=innerHeight*0.15;
+    panX=Math.max(-mx,Math.min(mx,panX));panY=Math.max(-my,Math.min(my,panY));}
+  function loop(t){
+    if(!reduce)driftT=t*0.00006;
+    const dX=Math.sin(driftT)*innerWidth*0.03,dY=Math.cos(driftT*0.8)*innerHeight*0.02;
+    const ox=panX+dX+ptrX,oy=panY+dY+ptrY,dpr=devicePixelRatio;
+    ctx.clearRect(0,0,W,H);
+    for(const s of bg){const a=s.a+Math.sin(t*s.tw+s.p)*0.2;
+      let x=(s.x+ox*s.depth*dpr)%W;if(x<0)x+=W;let y=(s.y+oy*s.depth*dpr)%H;if(y<0)y+=H;
+      ctx.beginPath();ctx.fillStyle=`rgba(228,234,255,${Math.max(0,a)})`;ctx.arc(x,y,s.r,0,6.2832);ctx.fill();}
+    world.style.transform=`translate(${ox*1.25}px,${oy*1.25}px)`;
+    if(activeStar&&detail.classList.contains('show'))positionDetail(activeStar);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  addEventListener('pointermove',e=>{if(reduce)return;ptrX=(e.clientX/innerWidth-0.5)*-40;ptrY=(e.clientY/innerHeight-0.5)*-26;});
+  addEventListener('wheel',e=>{panX-=e.deltaX*0.6;panY-=e.deltaY*0.6;clampPan();},{passive:true});
+  let dragging=false,lx=0,ly=0;
+  addEventListener('pointerdown',e=>{if(e.target.closest('.station,.detail,.clear,.fear-star,.masthead'))return;dragging=true;lx=e.clientX;ly=e.clientY;});
+  addEventListener('pointermove',e=>{if(!dragging)return;panX+=e.clientX-lx;panY+=e.clientY-ly;lx=e.clientX;ly=e.clientY;clampPan();});
+  addEventListener('pointerup',()=>dragging=false);
+
+  const stars=[],countEl=document.getElementById('count'),hint=document.getElementById('hint');
+  const HUES=['#fff4d6','#d9f3ff','#e8dcff','#ffe6c4','#ffd9ee','#fff4d6','#d9f3ff'];
+  const WITNESS=["Heard. The sky is wider now.","Said out loud, it weighs a little less.",
+    "It's a star now, not a secret.","You spoke. The room was listening.",
+    "That took something. It's up there.","Out of you, into the light.",
+    "Named, and let go.","You stepped up. That's the whole thing.",
+    "Brave. It belongs to all of us now.","Spoken once, and never only yours again."];
+
+  function updateCount(){const n=stars.length;
+    countEl.textContent=n===0?"an empty sky, waiting":n===1?"one voice in the sky":`${n} voices in the sky`;
+    hint.classList.toggle('show',n>0);}
+  function placeStar(loud){
+    const W2=innerWidth*1.3,H2=innerHeight*1.3,m=90;
+    const x=m+Math.random()*(W2-2*m),y=m+Math.random()*(H2*0.66);
+    const s=8+loud*22+Math.random()*7,hue=HUES[Math.floor(Math.random()*HUES.length)];
+    const el=document.createElement('div');el.className='fear-star';
+    el.style.cssText=`left:${x}px;top:${y}px;--s:${s}px;--c1:${hue};animation-delay:${Math.random()*4.5}s`;
+    el.innerHTML='<div class="halo"></div><div class="core"></div>';
+    world.appendChild(el);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('born')));
+    return el;
+  }
+
+  const detail=document.getElementById('detail'),detailW=document.getElementById('detailWitness'),
+        detailMeta=document.getElementById('detailMeta');
+  let activeStar=null,activeAudio=null;
+  function positionDetail(star){const r=star.el.getBoundingClientRect();
+    detail.style.left=(r.left+r.width/2)+'px';detail.style.top=r.top+'px';}
+  function openDetail(star){closeDetail();activeStar=star;detailW.textContent=star.witness;
+    detailMeta.textContent="a voice from "+star.time;positionDetail(star);detail.classList.add('show');}
+  function closeDetail(){detail.classList.remove('show');
+    if(activeStar)activeStar.el.classList.remove('playing');
+    if(activeAudio){activeAudio.pause();activeAudio=null;}activeStar=null;}
+  document.getElementById('detailPlay').addEventListener('click',()=>{
+    if(!activeStar)return;
+    if(activeAudio){activeAudio.pause();activeAudio=null;activeStar.el.classList.remove('playing');return;}
+    activeAudio=new Audio(activeStar.audioURL);activeStar.el.classList.add('playing');activeAudio.play();
+    activeAudio.onended=()=>{if(activeStar)activeStar.el.classList.remove('playing');activeAudio=null;};});
+  addEventListener('pointerdown',e=>{if(!detail.contains(e.target)&&!e.target.closest('.fear-star'))closeDetail();});
+
+  const sens=document.getElementById('sens'),thresholdMark=document.getElementById('thresholdMark');
+  function setThr(){thresholdMark.style.bottom=(parseFloat(sens.value)*100)+'%';}
+  sens.addEventListener('input',setThr);setThr();
+  document.getElementById('clear').addEventListener('click',()=>{
+    if(!stars.length)return;if(!confirm('Clear every voice from the sky?'))return;
+    stars.forEach(s=>{URL.revokeObjectURL(s.audioURL);s.el.remove();});stars.length=0;closeDetail();updateCount();});
+
+  const overlay=document.getElementById('overlay'),riteLine=document.getElementById('riteLine'),
+        riteSub=document.getElementById('riteSub'),fill=document.getElementById('fill'),
+        releaseBtn=document.getElementById('release');
+  let mediaStream=null,recorder=null,chunks=[],audioCtx=null,analyser=null,raf=null,
+      ignited=false,peak=0,silenceStart=0,started=0;
+
+  async function beginRite(){
+    overlay.classList.add('show');
+    riteLine.textContent="Take a breath. When you're ready, speak.";
+    riteSub.textContent="Say it loud enough that the sky can hear you.";
+    releaseBtn.style.display='none';ignited=false;peak=0;chunks=[];
+    try{mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});}
+    catch(err){riteLine.textContent="The sky can't hear without a microphone.";
+      riteSub.textContent="Allow microphone access, then step up again.";return;}
+    recorder=new MediaRecorder(mediaStream);
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    recorder.onstop=finishRite;recorder.start();started=performance.now();
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=audioCtx.createMediaStreamSource(mediaStream);
+    analyser=audioCtx.createAnalyser();analyser.fftSize=1024;src.connect(analyser);
+    const data=new Uint8Array(analyser.fftSize);
+    (function read(){
+      analyser.getByteTimeDomainData(data);
+      let sum=0;for(let i=0;i<data.length;i++){const v=(data[i]-128)/128;sum+=v*v;}
+      const level=Math.min(1,Math.sqrt(sum/data.length)*2.2);peak=Math.max(peak,level);
+      fill.style.height=(level*100)+'%';const thr=parseFloat(sens.value);
+      if(level>=thr){
+        if(!ignited&&performance.now()-started>300){ignited=true;
+          riteLine.textContent="The sky is listening.";
+          riteSub.textContent="Say the whole of it. Fall silent when it's out.";
+          releaseBtn.style.display='inline-block';}
+        silenceStart=0;
+      }else if(ignited){
+        if(!silenceStart)silenceStart=performance.now();
+        else if(performance.now()-silenceStart>1800){stopRite();return;}}
+      raf=requestAnimationFrame(read);
+    })();
+  }
+  function stopRite(){if(raf)cancelAnimationFrame(raf);if(recorder&&recorder.state!=='inactive')recorder.stop();}
+  function teardown(){if(mediaStream)mediaStream.getTracks().forEach(t=>t.stop());if(audioCtx)audioCtx.close();mediaStream=audioCtx=analyser=null;}
+  function finishRite(){
+    teardown();
+    if(!ignited){riteLine.textContent="The sky didn't quite hear you.";
+      riteSub.textContent="It's louder than feels comfortable — that's the point. Try once more.";
+      fill.style.height='0%';setTimeout(()=>overlay.classList.remove('show'),2600);return;}
+    const blob=new Blob(chunks,{type:chunks[0]?.type||'audio/webm'}),url=URL.createObjectURL(blob);
+    const witness=WITNESS[Math.floor(Math.random()*WITNESS.length)];
+    riteLine.textContent=witness;riteSub.textContent="";fill.style.height='0%';
+    setTimeout(()=>{const el=placeStar(peak);
+      const star={el,audioURL:url,witness,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
+      el.addEventListener('click',ev=>{ev.stopPropagation();openDetail(star);});
+      stars.push(star);updateCount();overlay.classList.remove('show');},1700);
+  }
+  document.getElementById('step').addEventListener('click',beginRite);
+  releaseBtn.addEventListener('click',stopRite);
+  document.getElementById('cancel').addEventListener('click',()=>{
+    if(raf)cancelAnimationFrame(raf);
+    if(recorder&&recorder.state!=='inactive'){recorder.onstop=null;recorder.stop();}
+    teardown();overlay.classList.remove('show');fill.style.height='0%';});
+
+  updateCount();
+})();
+</script>
+</body>
 </html>

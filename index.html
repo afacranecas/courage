@@ -66,10 +66,13 @@
   .masthead h1{font-weight:300;font-size:30px;letter-spacing:.16em;text-transform:uppercase;text-indent:.16em;margin-top:10px}
   .count{font-size:13px;font-weight:300;color:var(--ash);margin-top:6px;letter-spacing:.08em}
 
-  .clear{position:fixed;top:36px;right:30px;z-index:6;font-family:var(--ui);font-weight:400;
+  .clear,.sound-toggle{position:fixed;top:36px;z-index:6;font-family:var(--ui);font-weight:400;
     font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ash);
     background:none;border:none;cursor:pointer;transition:.2s}
+  .clear{right:30px}
+  .sound-toggle{left:30px}
   .clear:hover{color:var(--pink)}
+  .sound-toggle:hover,.sound-toggle.on{color:var(--cyan)}
 
   /* ---------- station ---------- */
   .station{position:fixed;bottom:0;left:0;right:0;z-index:5;display:flex;flex-direction:column;
@@ -169,6 +172,7 @@
     <h1>Constellation of Courage</h1>
     <div class="count" id="count">an empty sky, waiting</div>
   </div>
+  <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false">sound: off</button>
   <button class="clear" id="clear">clear the sky</button>
 
   <div class="hint" id="hint">drag or scroll to drift · touch a star to hear who was brave</div>
@@ -252,7 +256,8 @@
     "Named, and let go.","You stepped up. That's the whole thing.",
     "Brave. It belongs to all of us now.","Spoken once, and never only yours again."];
 
-  let soundCtx=null,ambientGain=null;
+  const soundToggle=document.getElementById('soundToggle');
+  let soundCtx=null,ambientGain=null,soundEnabled=false,recordingRite=false;
   function setAmbientLevel(level,duration=.8){
     if(!soundCtx||!ambientGain)return;
     const now=soundCtx.currentTime;
@@ -260,11 +265,15 @@
     ambientGain.gain.setValueAtTime(ambientGain.gain.value,now);
     ambientGain.gain.linearRampToValueAtTime(level,now+duration);
   }
-  function startSoundscape(){
-    if(soundCtx){if(soundCtx.state==='suspended')soundCtx.resume();return;}
+  async function startSoundscape(){
+    if(soundCtx){
+      if(soundCtx.state==='suspended')await soundCtx.resume();
+      return;
+    }
     const AudioContext=window.AudioContext||window.webkitAudioContext;
     if(!AudioContext)return;
     soundCtx=new AudioContext();
+    if(soundCtx.state==='suspended')await soundCtx.resume();
 
     const length=soundCtx.sampleRate*3,buffer=soundCtx.createBuffer(1,length,soundCtx.sampleRate);
     const data=buffer.getChannelData(0);
@@ -281,10 +290,25 @@
     ambientGain.gain.value=0;
     noise.connect(filter).connect(ambientGain).connect(soundCtx.destination);
     noise.start();
-    setAmbientLevel(.035,1.8);
+  }
+  async function enableSound(){
+    await startSoundscape();
+    if(!soundCtx)return;
+    soundEnabled=true;
+    soundToggle.textContent='sound: on';
+    soundToggle.classList.add('on');
+    soundToggle.setAttribute('aria-pressed','true');
+    setAmbientLevel(recordingRite?.001:.035,1.2);
+  }
+  function disableSound(){
+    soundEnabled=false;
+    soundToggle.textContent='sound: off';
+    soundToggle.classList.remove('on');
+    soundToggle.setAttribute('aria-pressed','false');
+    setAmbientLevel(0,.35);
   }
   function playStarChime(){
-    if(!soundCtx||soundCtx.state!=='running')return;
+    if(!soundEnabled||!soundCtx||soundCtx.state!=='running')return;
     const now=soundCtx.currentTime,master=soundCtx.createGain();
     const base=[523.25,587.33,659.25,783.99][Math.floor(Math.random()*4)];
     master.gain.setValueAtTime(0,now);
@@ -300,8 +324,10 @@
       tone.start(now+index*.045);tone.stop(now+1.4);
     });
   }
-  addEventListener('pointerdown',startSoundscape,{once:true});
-  addEventListener('keydown',startSoundscape,{once:true});
+  soundToggle.addEventListener('click',async e=>{
+    e.stopPropagation();
+    if(soundEnabled)disableSound();else await enableSound();
+  });
 
   function updateCount(){const n=stars.length;
     countEl.textContent=n===0?"an empty sky, waiting":n===1?"one voice in the sky":`${n} voices in the sky`;
@@ -350,13 +376,14 @@
       ignited=false,peak=0,silenceStart=0,started=0;
 
   async function beginRite(){
+    recordingRite=true;
     setAmbientLevel(.001,.35);
     overlay.classList.add('show');
     riteLine.textContent="Take a breath. When you're ready, speak.";
     riteSub.textContent="Say it loud enough that the sky can hear you.";
     releaseBtn.style.display='none';ignited=false;peak=0;chunks=[];
     try{mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});}
-    catch(err){setAmbientLevel(.035,.8);riteLine.textContent="The sky can't hear without a microphone.";
+    catch(err){recordingRite=false;setAmbientLevel(soundEnabled?.035:0,.8);riteLine.textContent="The sky can't hear without a microphone.";
       riteSub.textContent="Allow microphone access, then step up again.";return;}
     recorder=new MediaRecorder(mediaStream);
     recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
@@ -384,7 +411,7 @@
   }
   function stopRite(){if(raf)cancelAnimationFrame(raf);if(recorder&&recorder.state!=='inactive')recorder.stop();}
   function teardown(){if(mediaStream)mediaStream.getTracks().forEach(t=>t.stop());if(audioCtx)audioCtx.close();
-    mediaStream=audioCtx=analyser=null;setAmbientLevel(.035,1.2);}
+    mediaStream=audioCtx=analyser=null;recordingRite=false;setAmbientLevel(soundEnabled?.035:0,1.2);}
   function finishRite(){
     teardown();
     if(!ignited){riteLine.textContent="The sky didn't quite hear you.";

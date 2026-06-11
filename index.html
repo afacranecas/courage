@@ -252,6 +252,57 @@
     "Named, and let go.","You stepped up. That's the whole thing.",
     "Brave. It belongs to all of us now.","Spoken once, and never only yours again."];
 
+  let soundCtx=null,ambientGain=null;
+  function setAmbientLevel(level,duration=.8){
+    if(!soundCtx||!ambientGain)return;
+    const now=soundCtx.currentTime;
+    ambientGain.gain.cancelScheduledValues(now);
+    ambientGain.gain.setValueAtTime(ambientGain.gain.value,now);
+    ambientGain.gain.linearRampToValueAtTime(level,now+duration);
+  }
+  function startSoundscape(){
+    if(soundCtx){if(soundCtx.state==='suspended')soundCtx.resume();return;}
+    const AudioContext=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContext)return;
+    soundCtx=new AudioContext();
+
+    const length=soundCtx.sampleRate*3,buffer=soundCtx.createBuffer(1,length,soundCtx.sampleRate);
+    const data=buffer.getChannelData(0);
+    let last=0;
+    for(let i=0;i<length;i++){
+      const white=Math.random()*2-1;
+      last=last*.985+white*.015;
+      data[i]=white*.22+last*.78;
+    }
+    const noise=soundCtx.createBufferSource(),filter=soundCtx.createBiquadFilter();
+    ambientGain=soundCtx.createGain();
+    noise.buffer=buffer;noise.loop=true;
+    filter.type='bandpass';filter.frequency.value=780;filter.Q.value=.28;
+    ambientGain.gain.value=0;
+    noise.connect(filter).connect(ambientGain).connect(soundCtx.destination);
+    noise.start();
+    setAmbientLevel(.035,1.8);
+  }
+  function playStarChime(){
+    if(!soundCtx||soundCtx.state!=='running')return;
+    const now=soundCtx.currentTime,master=soundCtx.createGain();
+    const base=[523.25,587.33,659.25,783.99][Math.floor(Math.random()*4)];
+    master.gain.setValueAtTime(0,now);
+    master.gain.linearRampToValueAtTime(.055,now+.012);
+    master.gain.exponentialRampToValueAtTime(.0001,now+1.35);
+    master.connect(soundCtx.destination);
+    [base,base*2.01].forEach((frequency,index)=>{
+      const tone=soundCtx.createOscillator(),toneGain=soundCtx.createGain();
+      tone.type=index?'sine':'triangle';tone.frequency.value=frequency;
+      tone.detune.value=(Math.random()-.5)*10;
+      toneGain.gain.value=index?.32:.62;
+      tone.connect(toneGain).connect(master);
+      tone.start(now+index*.045);tone.stop(now+1.4);
+    });
+  }
+  addEventListener('pointerdown',startSoundscape,{once:true});
+  addEventListener('keydown',startSoundscape,{once:true});
+
   function updateCount(){const n=stars.length;
     countEl.textContent=n===0?"an empty sky, waiting":n===1?"one voice in the sky":`${n} voices in the sky`;
     hint.classList.toggle('show',n>0);}
@@ -262,6 +313,7 @@
     const el=document.createElement('div');el.className='fear-star';
     el.style.cssText=`left:${x}px;top:${y}px;--s:${s}px;--c1:${hue};animation-delay:${Math.random()*4.5}s`;
     el.innerHTML='<div class="halo"></div><div class="core"></div>';
+    el.addEventListener('pointerenter',playStarChime);
     world.appendChild(el);
     requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('born')));
     return el;
@@ -298,12 +350,13 @@
       ignited=false,peak=0,silenceStart=0,started=0;
 
   async function beginRite(){
+    setAmbientLevel(.001,.35);
     overlay.classList.add('show');
     riteLine.textContent="Take a breath. When you're ready, speak.";
     riteSub.textContent="Say it loud enough that the sky can hear you.";
     releaseBtn.style.display='none';ignited=false;peak=0;chunks=[];
     try{mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});}
-    catch(err){riteLine.textContent="The sky can't hear without a microphone.";
+    catch(err){setAmbientLevel(.035,.8);riteLine.textContent="The sky can't hear without a microphone.";
       riteSub.textContent="Allow microphone access, then step up again.";return;}
     recorder=new MediaRecorder(mediaStream);
     recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
@@ -330,7 +383,8 @@
     })();
   }
   function stopRite(){if(raf)cancelAnimationFrame(raf);if(recorder&&recorder.state!=='inactive')recorder.stop();}
-  function teardown(){if(mediaStream)mediaStream.getTracks().forEach(t=>t.stop());if(audioCtx)audioCtx.close();mediaStream=audioCtx=analyser=null;}
+  function teardown(){if(mediaStream)mediaStream.getTracks().forEach(t=>t.stop());if(audioCtx)audioCtx.close();
+    mediaStream=audioCtx=analyser=null;setAmbientLevel(.035,1.2);}
   function finishRite(){
     teardown();
     if(!ignited){riteLine.textContent="The sky didn't quite hear you.";
